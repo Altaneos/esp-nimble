@@ -995,6 +995,17 @@ typedef int ble_gap_event_fn(struct ble_gap_event *event, void *arg);
  */
 int ble_gap_conn_find(uint16_t handle, struct ble_gap_conn_desc *out_desc);
 
+/** Altaneos ESP-IDF extension: per-link native reconnect ownership. */
+#define BLE_GAP_CONN_REATTEMPT_CONTROL 1
+/**
+ * Enable (1) or disable (0) automatic connection-establishment retries for one
+ * live connection. New links retain the configured SDK default (enabled).
+ * Disable when the application owns reconnects and callback generations.
+ * Returns 0, BLE_HS_ENOTCONN, or BLE_HS_EINVAL. Call from host task context.
+ */
+int ble_gap_conn_reattempt_set(uint16_t handle, uint8_t enabled);
+
+
 /**
  * Searches for a connection with a peer with the specified address.
  * If a matching connection is found, the supplied connection descriptor

@@ -189,7 +189,11 @@ ble_hs_hci_evt_disconn_complete(uint8_t event_code, const void *data,
     ble_hs_unlock();
 
 #if CONFIG_BT_NIMBLE_ENABLE_CONN_REATTEMPT
-    if (ev->reason == BLE_ERR_CONN_ESTABLISHMENT) {
+    /* Managed sessions receive the normal disconnect below and reconnect
+     * themselves. In particular, do not replace their callback cookie with
+     * the SDK retry path's temporary connection descriptor. */
+    if (conn != NULL && ev->reason == BLE_ERR_CONN_ESTABLISHMENT &&
+        !(conn->bhc_flags & BLE_HS_CONN_F_NO_REATTEMPT)) {
         int rc, i, idx;
 
         idx = ble_gap_find_reattempt_conn_idx(conn);
