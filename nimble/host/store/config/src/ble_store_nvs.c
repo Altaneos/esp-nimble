@@ -532,6 +532,46 @@ int ble_store_config_persist_cccds(void)
     return 0;
 }
 
+int
+ble_store_peer_ltk_is_persisted(const ble_addr_t *peer_addr)
+{
+    const struct ble_store_key_sec key = { .peer_addr = *peer_addr };
+    struct ble_store_value_sec current;
+    int rc = ble_store_read_peer_sec(&key, &current);
+    if (rc != 0 || !current.ltk_present) {
+        return rc != 0 ? rc : BLE_HS_ENOENT;
+    }
+
+    nvs_handle_t handle;
+    if (nvs_open(NIMBLE_NVS_NAMESPACE, NVS_READONLY, &handle) != ESP_OK) {
+        return BLE_HS_ESTORE_FAIL;
+    }
+
+    rc = BLE_HS_ENOENT;
+    for (int i = 1; i <= MYNEWT_VAL(BLE_STORE_MAX_BONDS); i++) {
+        char name[NIMBLE_NVS_STR_NAME_MAX_LEN];
+        struct ble_store_value_sec persisted;
+        size_t size = sizeof(persisted);
+        get_nvs_key_string(BLE_STORE_OBJ_TYPE_PEER_SEC, i, name);
+        esp_err_t err = nvs_get_blob(handle, name, &persisted, &size);
+        if (err == ESP_ERR_NVS_NOT_FOUND) {
+            continue;
+        }
+        if (err != ESP_OK || size != sizeof(persisted)) {
+            rc = BLE_HS_ESTORE_FAIL;
+            break;
+        }
+        if (persisted.ltk_present && ble_addr_cmp(&persisted.peer_addr, peer_addr) == 0 &&
+            memcmp(persisted.ltk, current.ltk, sizeof(current.ltk)) == 0 &&
+            persisted.ediv == current.ediv && persisted.rand_num == current.rand_num) {
+            rc = 0;
+            break;
+        }
+    }
+    nvs_close(handle);
+    return rc;
+}
+
 int ble_store_config_persist_peer_secs(void)
 {
     int nvs_count, nvs_idx;

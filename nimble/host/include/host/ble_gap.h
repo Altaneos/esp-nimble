@@ -1005,6 +1005,10 @@ int ble_gap_conn_find(uint16_t handle, struct ble_gap_conn_desc *out_desc);
  */
 int ble_gap_conn_reattempt_set(uint16_t handle, uint8_t enabled);
 
+/* Allow only restoration of existing keys on this central-role connection. */
+#define BLE_GAP_CONN_BOND_RESTORE_ONLY 1
+int ble_gap_conn_require_existing_bond(uint16_t handle);
+
 
 /**
  * Searches for a connection with a peer with the specified address.

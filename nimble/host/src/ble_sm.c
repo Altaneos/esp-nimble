@@ -1791,6 +1791,13 @@ ble_sm_pair_req_rx(uint16_t conn_handle, struct os_mbuf **om,
 
     ble_hs_lock();
 
+    if (ble_hs_conn_find_assert(conn_handle)->bhc_flags & BLE_HS_CONN_F_BOND_RESTORE) {
+        res->sm_err = BLE_SM_ERR_PAIR_NOT_SUPP;
+        res->app_status = BLE_HS_SM_US_ERR(BLE_SM_ERR_PAIR_NOT_SUPP);
+        ble_hs_unlock();
+        return;
+    }
+
     /* XXX: Check connection state; reject if not appropriate. */
     /* XXX: Ensure enough time has passed since the previous failed pairing
      * attempt.
@@ -2483,12 +2490,18 @@ ble_sm_pair_initiate(uint16_t conn_handle)
 {
     struct ble_sm_result res;
     struct ble_sm_proc *proc;
+    struct ble_hs_conn *conn;
     int rc;
 
     memset(&res, 0, sizeof(res));
 
-    /* Make sure a procedure isn't already in progress for this connection. */
+    /* Also gate pairing triggered by a peer Security Request. */
     ble_hs_lock();
+    conn = ble_hs_conn_find(conn_handle);
+    if (conn == NULL || (conn->bhc_flags & BLE_HS_CONN_F_BOND_RESTORE)) {
+        ble_hs_unlock();
+        return conn == NULL ? BLE_HS_ENOTCONN : BLE_HS_EREJECT;
+    }
     proc = ble_sm_proc_find(conn_handle, BLE_SM_PROC_STATE_NONE, -1, NULL);
     ble_hs_unlock();
 
